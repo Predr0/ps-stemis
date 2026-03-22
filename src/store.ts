@@ -11,12 +11,12 @@ import {
   type OnNodesChange,
   type OnEdgesChange,
   type OnConnect,
-} from 'reactflow'; 
+} from 'reactflow';
 
 export interface FunnelNodeData {
   label: string;
-  type: 'ads' | 'lp' | 'form' | 'checkout' | 'success';
-  stats?: {
+  type: 'ads' | 'lp' | 'form' | 'upsell' | 'checkout' | 'success'; 
+  stats: {
     views: number;
     conversions: number;
   };
@@ -25,45 +25,113 @@ export interface FunnelNodeData {
 interface FunnelState {
   nodes: Node<FunnelNodeData>[];
   edges: Edge[];
+  pendingNode: { type: FunnelNodeData['type']; label: string } | null;
+  
   onNodesChange: OnNodesChange;
   onEdgesChange: OnEdgesChange;
   onConnect: OnConnect;
-  addNode: (type: FunnelNodeData['type'], label: string) => void;
+  setPendingNode: (node: { type: FunnelNodeData['type']; label: string } | null) => void;
+  addNode: (funnelType: FunnelNodeData['type'], label: string, position: { x: number; y: number }) => void;
+  deleteNode: (id: string) => void;
+  calculateFlow: () => void;
+  saveToLocal: () => void;
+  loadFromLocal: () => void;
 }
 
 export const useStore = create<FunnelState>((set, get) => ({
-  nodes: [
-    { 
-      id: '1', 
-      type: 'default', 
-      data: { label: 'Início do Funil', type: 'ads', stats: { views: 1000, conversions: 50 } }, 
-      position: { x: 250, y: 5 } 
-    },
-  ],
+  nodes: [],
   edges: [],
+  pendingNode: null,
+
+  setPendingNode: (pendingNode) => set({ pendingNode }),
+
   onNodesChange: (changes: NodeChange[]) => {
-    set({
-      nodes: applyNodeChanges(changes, get().nodes),
-    });
+    set({ nodes: applyNodeChanges(changes, get().nodes) });
+    get().saveToLocal();
   },
+
   onEdgesChange: (changes: EdgeChange[]) => {
-    set({
-      edges: applyEdgeChanges(changes, get().edges),
-    });
+    set({ edges: applyEdgeChanges(changes, get().edges) });
+    get().saveToLocal();
   },
+
   onConnect: (connection: Connection) => {
-    set({
-      edges: addEdge(connection, get().edges),
-    });
+
+    const newEdge = { 
+      ...connection, 
+      animated: true, 
+      style: { stroke: '#aa3bff', strokeWidth: 2 } 
+    };
+    set({ edges: addEdge(newEdge, get().edges) });
+  
+    get().calculateFlow();
+    get().saveToLocal();
   },
-  addNode: (type, label) => {
-    const id = Math.random().toString(36).substr(2, 9);
+
+  addNode: (funnelType, label, position) => {
+    const id = Math.random().toString(36).substring(2, 9);
     const newNode: Node<FunnelNodeData> = {
       id,
-      type: 'default', // Depois vamos mudar para custom nodes
-      data: { label, type, stats: { views: 0, conversions: 0 } },
-      position: { x: Math.random() * 400, y: Math.random() * 400 },
+      type: 'funnelNode',
+      data: { 
+        label, 
+        type: funnelType, 
+        stats: { 
+          views: funnelType === 'ads' ? 5000 : 0, 
+          conversions: Math.floor(Math.random() * 15) + 5
+        } 
+      },
+      position,
     };
-    set({ nodes: [...get().nodes, newNode] });
+    set({ nodes: [...get().nodes, newNode], pendingNode: null });
+    get().calculateFlow();
+    get().saveToLocal();
   },
+
+  deleteNode: (id) => {
+    set({
+      nodes: get().nodes.filter((node) => node.id !== id),
+      edges: get().edges.filter((edge) => edge.source !== id && edge.target !== id),
+    });
+    get().calculateFlow();
+    get().saveToLocal();
+  },
+
+  calculateFlow: () => {
+    const { nodes, edges } = get();
+    const nodeMap = new Map(nodes.map(node => [node.id, { ...node }]));
+
+    nodeMap.forEach((node) => {
+      if (node.data.type !== 'ads') {
+        node.data.stats.views = 0;
+      }
+    });
+
+    edges.forEach((edge) => {
+      const source = nodeMap.get(edge.source);
+      const target = nodeMap.get(edge.target);
+
+      if (source && target) {
+        const incomingViews = Math.floor(
+          source.data.stats.views * (source.data.stats.conversions / 100)
+        );
+        target.data.stats.views += incomingViews;
+      }
+    });
+
+    set({ nodes: Array.from(nodeMap.values()) });
+  },
+
+  saveToLocal: () => {
+    const data = { nodes: get().nodes, edges: get().edges };
+    localStorage.setItem('stemis-funnel-data', JSON.stringify(data));
+  },
+
+  loadFromLocal: () => {
+    const saved = localStorage.getItem('stemis-funnel-data');
+    if (saved) {
+      const { nodes, edges } = JSON.parse(saved);
+      set({ nodes, edges });
+    }
+  }
 }));
