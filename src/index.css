@@ -80,6 +80,10 @@ html, body, #root {
     }
   }
 
+  .cursor-pen {
+  cursor: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16"><circle cx="8" cy="8" r="3" fill="black" stroke="white" stroke-width="1"/></svg>') 8 8, crosshair !important;
+}
+
   h2 {
     @apply text-2xl leading-[118%] -tracking-[0.24px] mb-2;
     @media (max-width: 1024px) {
