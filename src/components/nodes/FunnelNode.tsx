@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Handle, Position, type NodeProps } from 'reactflow';
-import { Megaphone, MousePointer2, ClipboardList, ShoppingCart, Trophy, Trash2, TrendingUp, Check } from 'lucide-react';
+import { Megaphone, MousePointer2, ClipboardList, ShoppingCart, Trophy, Trash2, TrendingUp } from 'lucide-react';
 import { type FunnelNodeData, useStore } from '../../store';
 
 const nodeConfigs = {
