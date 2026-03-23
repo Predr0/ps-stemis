@@ -50,6 +50,8 @@ interface FunnelState {
   calculateFlow: () => void;
   saveToLocal: () => void;
   loadFromLocal: () => void;
+  theme: 'dark' | 'light';
+  toggleTheme: () => void;
 }
 
 export const useStore = create<FunnelState>((set, get) => ({
@@ -64,6 +66,12 @@ export const useStore = create<FunnelState>((set, get) => ({
     set({ nodes: applyNodeChanges(changes, get().nodes) });
     get().saveToLocal();
   },
+
+  theme: 'dark', 
+toggleTheme: () => {
+  set({ theme: get().theme === 'dark' ? 'light' : 'dark' });
+  get().saveToLocal();
+},
   onEdgesChange: (changes) => {
     set({ edges: applyEdgeChanges(changes, get().edges) });
     get().saveToLocal();

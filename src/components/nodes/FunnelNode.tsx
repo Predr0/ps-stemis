@@ -1,6 +1,6 @@
-import React, { useState } from 'react'; // Import direto do React para evitar erro
+import React, { useState } from 'react';
 import { Handle, Position, type NodeProps } from 'reactflow';
-import { Megaphone, MousePointer2, ClipboardList, ShoppingCart, Trophy, Trash2, TrendingUp } from 'lucide-react';
+import { Megaphone, MousePointer2, ClipboardList, ShoppingCart, Trophy, Trash2, TrendingUp, Check } from 'lucide-react';
 import { type FunnelNodeData, useStore } from '../../store';
 
 const nodeConfigs = {
@@ -13,8 +13,8 @@ const nodeConfigs = {
 };
 
 export function FunnelNode({ id, data, selected }: NodeProps<FunnelNodeData>) {
-  const updateNodeData = useStore((s) => s.updateNodeData);
-  const deleteNode = useStore((s) => s.deleteNode);
+  const store = useStore();
+  const isDark = store.theme === 'dark';
   
   const [isEditing, setIsEditing] = useState(false);
   const [label, setLabel] = useState(data.label);
@@ -24,11 +24,10 @@ export function FunnelNode({ id, data, selected }: NodeProps<FunnelNodeData>) {
   const Icon = config.icon;
 
   const handleSave = () => {
-    updateNodeData(id, label, Number(conv));
+    store.updateNodeData(id, label, Number(conv));
     setIsEditing(false);
   };
 
-  // Função de Blur corrigida (sem precisar do FocusEvent importado separadamente)
   const handleBlur = (e: React.FocusEvent<HTMLDivElement>) => {
     if (!e.currentTarget.contains(e.relatedTarget as Node)) {
       handleSave();
@@ -37,17 +36,22 @@ export function FunnelNode({ id, data, selected }: NodeProps<FunnelNodeData>) {
 
   return (
     <div 
-      className={`min-w-[180px] bg-[#1f2028] border-2 rounded-xl overflow-hidden transition-all duration-300 ${selected ? `${config.color} ${config.glow} scale-105` : 'border-white/10 shadow-lg'}`}
+      className={`min-w-[180px] border-2 rounded-xl overflow-hidden transition-all duration-300 shadow-lg
+        ${isDark ? 'bg-[#1f2028] border-white/10 text-white' : 'bg-white border-slate-200 text-slate-900'}
+        ${selected ? `${config.color} ${config.glow} scale-105` : ''}`}
       onDoubleClick={() => setIsEditing(true)}
       onBlur={handleBlur}
     >
-      <div className={`p-2 ${config.bg} border-b border-white/5 flex items-center justify-between`}>
+
+      <div className={`p-2 ${config.bg} border-b flex items-center justify-between ${isDark ? 'border-white/5' : 'border-slate-100'}`}>
         <div className="flex items-center gap-2">
           <Icon className={`w-3.5 h-3.5 ${config.text}`} />
-          <span className="text-[9px] font-black uppercase tracking-widest text-white/40">{config.label}</span>
+          <span className={`text-[9px] font-black uppercase tracking-widest ${isDark ? 'text-white/40' : 'text-slate-500'}`}>
+            {config.label}
+          </span>
         </div>
         {selected && (
-          <button onClick={(e) => { e.stopPropagation(); deleteNode(id); }} className="text-white/40 hover:text-red-400 transition-colors">
+          <button onClick={(e) => { e.stopPropagation(); store.deleteNode(id); }} className={`${isDark ? 'text-white/40 hover:text-red-400' : 'text-slate-400 hover:text-red-500'}`}>
             <Trash2 className="w-3 h-3" />
           </button>
         )}
@@ -61,8 +65,9 @@ export function FunnelNode({ id, data, selected }: NodeProps<FunnelNodeData>) {
               value={label} 
               onChange={(e) => setLabel(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && handleSave()}
-              onPointerDown={(e) => e.stopPropagation()} // Impede o drag ao clicar
-              className="nodrag nowheel w-full h-7 px-2 text-[11px] bg-white/5 border border-white/10 rounded outline-none focus:border-blue-500 text-white"
+              onPointerDown={(e) => e.stopPropagation()}
+              className={`nodrag nowheel w-full h-7 px-2 text-[11px] rounded outline-none border focus:border-blue-500 
+                ${isDark ? 'bg-white/5 border-white/10 text-white' : 'bg-slate-50 border-slate-200 text-slate-900'}`}
             />
             <div className="relative">
               <input 
@@ -70,22 +75,28 @@ export function FunnelNode({ id, data, selected }: NodeProps<FunnelNodeData>) {
                 value={conv} 
                 onChange={(e) => setConv(Number(e.target.value))}
                 onKeyDown={(e) => e.key === 'Enter' && handleSave()}
-                onPointerDown={(e) => e.stopPropagation()} // Impede o drag ao clicar
-                className="nodrag nowheel w-full h-7 px-2 text-[11px] bg-white/5 border border-white/10 rounded outline-none focus:border-blue-500 text-white"
+                onPointerDown={(e) => e.stopPropagation()}
+                className={`nodrag nowheel w-full h-7 px-2 text-[11px] rounded outline-none border focus:border-blue-500 
+                  ${isDark ? 'bg-white/5 border-white/10 text-white' : 'bg-slate-50 border-slate-200 text-slate-900'}`}
               />
-              <span className="absolute right-6 top-1.5 text-[10px] text-white/40">%</span>
+              <span className={`absolute right-6 top-1.5 text-[10px] ${isDark ? 'text-white/40' : 'text-slate-400'}`}>%</span>
             </div>
           </div>
         ) : (
           <>
-            <h3 className="text-sm font-medium text-white/90 text-center mb-1">{data.label}</h3>
+            <h3 className={`text-sm font-bold text-center mb-1 ${isDark ? 'text-white/90' : 'text-slate-800'}`}>
+              {data.label}
+            </h3>
+            
             <div className="flex flex-col gap-1">
               <div className="flex justify-between items-end">
-                <span className="text-[9px] text-white/30 uppercase font-bold tracking-tighter">Acessos</span>
-                <span className="text-base font-mono font-bold text-white leading-none">{data.stats.views.toLocaleString()}</span>
+                <span className={`text-[9px] uppercase font-bold tracking-tighter ${isDark ? 'text-white/30' : 'text-slate-400'}`}>Acessos</span>
+                <span className={`text-base font-mono font-bold leading-none ${isDark ? 'text-white' : 'text-slate-900'}`}>
+                  {data.stats.views.toLocaleString()}
+                </span>
               </div>
-              <div className="flex justify-between items-end border-t border-white/5 pt-2">
-                <span className="text-[9px] text-white/30 uppercase font-bold tracking-tighter">Conversão</span>
+              <div className={`flex justify-between items-end border-t pt-2 ${isDark ? 'border-white/5' : 'border-slate-100'}`}>
+                <span className={`text-[9px] uppercase font-bold tracking-tighter ${isDark ? 'text-white/30' : 'text-slate-400'}`}>Conversão</span>
                 <span className={`text-xs font-bold leading-none ${config.text}`}>{data.stats.conversions}%</span>
               </div>
             </div>
@@ -93,8 +104,8 @@ export function FunnelNode({ id, data, selected }: NodeProps<FunnelNodeData>) {
         )}
       </div>
 
-      <Handle type="target" position={Position.Top} className="w-2 h-2 !bg-[#1f2028] !border-gray-600" />
-      <Handle type="source" position={Position.Bottom} className={`w-2 h-2 !bg-[#1f2028] ${config.color.replace('border-', '!border-')}`} />
+      <Handle type="target" position={Position.Top} className={`w-2 h-2 border-none !bg-slate-400`} />
+      <Handle type="source" position={Position.Bottom} className={`w-2 h-2 border-none ${config.color.replace('border-', '!bg-')}`} />
     </div>
   );
 }
