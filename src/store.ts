@@ -35,6 +35,7 @@ interface FunnelState {
   mode: 'hand' | 'pen' | 'eraser';
   brushColor: string;
   drawings: DrawingStroke[];
+  theme: 'dark' | 'light';
   onNodesChange: OnNodesChange;
   onEdgesChange: OnEdgesChange;
   onConnect: OnConnect;
@@ -47,11 +48,10 @@ interface FunnelState {
   addDrawing: (stroke: DrawingStroke) => void;
   deleteDrawing: (id: string) => void;
   clearDrawings: () => void;
+  toggleTheme: () => void;
   calculateFlow: () => void;
   saveToLocal: () => void;
   loadFromLocal: () => void;
-  theme: 'dark' | 'light';
-  toggleTheme: () => void;
 }
 
 export const useStore = create<FunnelState>((set, get) => ({
@@ -61,37 +61,48 @@ export const useStore = create<FunnelState>((set, get) => ({
   mode: 'hand',
   brushColor: '#aa3bff',
   drawings: [],
+  theme: 'dark',
 
   onNodesChange: (changes) => {
     set({ nodes: applyNodeChanges(changes, get().nodes) });
     get().saveToLocal();
   },
-
-  theme: 'dark', 
-toggleTheme: () => {
-  set({ theme: get().theme === 'dark' ? 'light' : 'dark' });
-  get().saveToLocal();
-},
   onEdgesChange: (changes) => {
     set({ edges: applyEdgeChanges(changes, get().edges) });
+    get().calculateFlow();
     get().saveToLocal();
   },
   onConnect: (connection) => {
-    const newEdge = { ...connection, animated: true, style: { stroke: '#aa3bff', strokeWidth: 2 } };
+    const newEdge = { 
+      ...connection, 
+      animated: true, 
+      style: { stroke: '#3b82f6', strokeWidth: 2 } 
+    };
     set({ edges: addEdge(newEdge, get().edges) });
     get().calculateFlow();
     get().saveToLocal();
   },
-  setPendingNode: (pendingNode) => set({ pendingNode }),
+  setPendingNode: (node) => {
+    const currentPending = get().pendingNode;
+    if (currentPending && node && currentPending.type === node.type) {
+      set({ pendingNode: null });
+    } else {
+      set({ pendingNode: node });
+    }
+  },
   addNode: (funnelType, label, position) => {
     const id = Math.random().toString(36).substring(2, 9);
+    const randomConv = Math.floor(Math.random() * (20 - 8 + 1)) + 8;
     const newNode: Node<FunnelNodeData> = {
       id,
       type: 'funnelNode',
       data: { 
         label, 
         type: funnelType, 
-        stats: { views: funnelType === 'ads' ? 5000 : 0, conversions: 10 } 
+        stats: { 
+          views: funnelType === 'ads' ? 5000 : 0, 
+          conversions: randomConv 
+        } 
       },
       position,
     };
@@ -130,6 +141,10 @@ toggleTheme: () => {
     set({ drawings: [] });
     get().saveToLocal();
   },
+  toggleTheme: () => {
+    set({ theme: get().theme === 'dark' ? 'light' : 'dark' });
+    get().saveToLocal();
+  },
   calculateFlow: () => {
     const { nodes, edges } = get();
     const nodeMap = new Map(nodes.map(node => [
@@ -143,25 +158,49 @@ toggleTheme: () => {
       }
     });
 
-    edges.forEach((edge) => {
-      const source = nodeMap.get(edge.source);
-      const target = nodeMap.get(edge.target);
-      if (source && target) {
-        const tráfegoConvertido = Math.floor(source.data.stats.views * (source.data.stats.conversions / 100));
-        target.data.stats.views += tráfegoConvertido;
-      }
-    });
+    const queue = Array.from(nodeMap.values())
+      .filter(n => n.data.type === 'ads')
+      .map(n => n.id);
+
+    while (queue.length > 0) {
+      const sourceId = queue.shift()!;
+      const sourceNode = nodeMap.get(sourceId);
+      if (!sourceNode) continue;
+
+      const outgoingEdges = edges.filter(e => e.source === sourceId);
+      
+      outgoingEdges.forEach(edge => {
+        const targetNode = nodeMap.get(edge.target);
+        if (targetNode) {
+          const traffic = Math.floor(sourceNode.data.stats.views * (sourceNode.data.stats.conversions / 100));
+          targetNode.data.stats.views += traffic;
+          queue.push(targetNode.id);
+        }
+      });
+    }
 
     set({ nodes: Array.from(nodeMap.values()) });
   },
   saveToLocal: () => {
-    localStorage.setItem('miro-funnel-data', JSON.stringify({ nodes: get().nodes, edges: get().edges, drawings: get().drawings }));
+    const data = {
+      nodes: get().nodes,
+      edges: get().edges,
+      drawings: get().drawings,
+      theme: get().theme
+    };
+    localStorage.setItem('funnel-builder-data', JSON.stringify(data));
   },
   loadFromLocal: () => {
-    const saved = localStorage.getItem('miro-funnel-data');
+    const saved = localStorage.getItem('funnel-builder-data');
     if (saved) {
-      const { nodes, edges, drawings } = JSON.parse(saved);
-      set({ nodes: nodes || [], edges: edges || [], drawings: drawings || [] });
+      const { nodes, edges, drawings, theme } = JSON.parse(saved);
+      set({ 
+        nodes: nodes || [], 
+        edges: edges || [], 
+        drawings: drawings || [],
+        theme: theme || 'dark'
+      });
+      get().calculateFlow();
     }
   }
 }));
