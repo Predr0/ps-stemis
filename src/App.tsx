@@ -104,7 +104,7 @@ function Flow() {
           </div>
           <div className="flex flex-col gap-2 mt-2 pt-2 border-t">
             <Button variant="secondary" size="sm" onClick={() => fitView({ padding: 0.2, duration: 800 })} className="bg-blue-600 text-white"><Maximize className="w-4 h-4 mr-2" /> Centralizar</Button>
-            <Button variant="default" size="sm" className="bg-slate-900 text-white" onClick={() => alert('Salvo!')}><Save className="w-4 h-4 mr-2" /> Salvar</Button>
+            <Button variant="default" size="sm" className="bg-slate-900 text-white" onClick={() => alert('Salvo! (é um botão inútil, mas é pra simular o usuário salvando as coisinhas dele =)')}><Save className="w-4 h-4 mr-2" /> Salvar</Button>
           </div>
         </Panel>
       </ReactFlow>
