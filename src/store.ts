@@ -50,6 +50,8 @@ interface FunnelState {
   calculateFlow: () => void;
   saveToLocal: () => void;
   loadFromLocal: () => void;
+  theme: 'dark' | 'light';
+  toggleTheme: () => void;
 }
 
 export const useStore = create<FunnelState>((set, get) => ({
@@ -64,6 +66,12 @@ export const useStore = create<FunnelState>((set, get) => ({
     set({ nodes: applyNodeChanges(changes, get().nodes) });
     get().saveToLocal();
   },
+
+  theme: 'dark', 
+toggleTheme: () => {
+  set({ theme: get().theme === 'dark' ? 'light' : 'dark' });
+  get().saveToLocal();
+},
   onEdgesChange: (changes) => {
     set({ edges: applyEdgeChanges(changes, get().edges) });
     get().saveToLocal();
@@ -101,7 +109,9 @@ export const useStore = create<FunnelState>((set, get) => ({
   },
   updateNodeData: (id, label, conversions) => {
     set({
-      nodes: get().nodes.map((n) => n.id === id ? { ...n, data: { ...n.data, label, stats: { ...n.data.stats, conversions } } } : n),
+      nodes: get().nodes.map((n) => 
+        n.id === id ? { ...n, data: { ...n.data, label, stats: { ...n.data.stats, conversions } } } : n
+      ),
     });
     get().calculateFlow();
     get().saveToLocal();
@@ -122,13 +132,26 @@ export const useStore = create<FunnelState>((set, get) => ({
   },
   calculateFlow: () => {
     const { nodes, edges } = get();
-    const nodeMap = new Map(nodes.map(n => [n.id, { ...n, data: { ...n.data, stats: { ...n.data.stats } } }]));
-    nodeMap.forEach(n => { if (n.data.type !== 'ads') n.data.stats.views = 0; });
-    edges.forEach(e => {
-      const s = nodeMap.get(e.source);
-      const t = nodeMap.get(e.target);
-      if (s && t) t.data.stats.views += Math.floor(s.data.stats.views * (s.data.stats.conversions / 100));
+    const nodeMap = new Map(nodes.map(node => [
+      node.id, 
+      { ...node, data: { ...node.data, stats: { ...node.data.stats } } }
+    ]));
+
+    nodeMap.forEach((node) => {
+      if (node.data.type !== 'ads') {
+        node.data.stats.views = 0;
+      }
     });
+
+    edges.forEach((edge) => {
+      const source = nodeMap.get(edge.source);
+      const target = nodeMap.get(edge.target);
+      if (source && target) {
+        const tráfegoConvertido = Math.floor(source.data.stats.views * (source.data.stats.conversions / 100));
+        target.data.stats.views += tráfegoConvertido;
+      }
+    });
+
     set({ nodes: Array.from(nodeMap.values()) });
   },
   saveToLocal: () => {
