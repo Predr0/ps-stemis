@@ -183,7 +183,7 @@ function Flow() {
 
           <div className={`flex flex-col gap-2 mt-2 pt-2 border-t ${isDark ? 'border-slate-700' : 'border-slate-100'}`}>
             <Button variant="secondary" size="sm" onClick={() => fitView({ padding: 0.2, duration: 800 })} className="bg-blue-600 text-white hover:bg-blue-700 shadow-md"><Maximize className="w-4 h-4 mr-2" /> Centralizar</Button>
-            <Button variant="default" size="sm" className={`text-white shadow-md ${isDark ? 'bg-slate-800 hover:bg-black' : 'bg-slate-900 hover:bg-black'}`} onClick={() => { store.saveToLocal(); alert('Salvo!'); }}><Save className="w-4 h-4 mr-2" /> Salvar Projeto</Button>
+            <Button variant="default" size="sm" className={`text-white shadow-md ${isDark ? 'bg-slate-800 hover:bg-black' : 'bg-slate-900 hover:bg-black'}`} onClick={() => { store.saveToLocal(); alert('Salvo! (obviamente é inútil e não funciona de verdade, mas é pra simular o caminho feliz que o usuário pode ter =)'); }}><Save className="w-4 h-4 mr-2" /> Salvar Projeto</Button>
           </div>
         </Panel>
       </ReactFlow>
